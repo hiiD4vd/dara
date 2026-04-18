@@ -13,6 +13,7 @@ export function CatChatModal() {
   const [messages, setMessages] = useState<{ id?: string, role: "user" | "cat"; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,14 +27,20 @@ export function CatChatModal() {
   }, [messages, isLoading]);
 
   const fetchMessages = async () => {
+    // Ambil user ID
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setUserId(user.id);
+
     const { data, error } = await supabase
       .from("cat_chats")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: true });
     
     if (!error && data) {
       if (data.length === 0) {
-        setMessages([{ role: "cat", text: "Meow~ Halo Rara, aku di sini jagain rumah. Ada apa hari ini?" }]);
+        setMessages([{ role: "cat", text: "Meow~ Halo sayang, aku di sini jagain rumah. Ada apa hari ini?" }]);
       } else {
         setMessages(data);
       }
@@ -41,7 +48,7 @@ export function CatChatModal() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !userId) return;
 
     const userMessage = input;
     setInput("");
@@ -50,8 +57,8 @@ export function CatChatModal() {
     const newMessages = [...messages, { role: "user" as const, text: userMessage }];
     setMessages(newMessages);
 
-    // Simpan pesan user ke Supabase
-    await supabase.from("cat_chats").insert([{ role: "user", text: userMessage }]);
+    // Simpan pesan user ke Supabase dengan user_id
+    await supabase.from("cat_chats").insert([{ user_id: userId, role: "user", text: userMessage }]);
 
     try {
       const response = await fetch("/api/chat", {
@@ -61,8 +68,8 @@ export function CatChatModal() {
       });
       const data = await response.json();
       
-      // Simpan balasan AI ke Supabase
-      await supabase.from("cat_chats").insert([{ role: "cat", text: data.reply }]);
+      // Simpan balasan AI ke Supabase dengan user_id
+      await supabase.from("cat_chats").insert([{ user_id: userId, role: "cat", text: data.reply }]);
 
       setMessages([...newMessages, { role: "cat", text: data.reply }]);
     } catch (error) {

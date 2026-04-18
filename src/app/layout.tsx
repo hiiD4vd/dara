@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Caveat } from "next/font/google";
 import { Navigation } from "@/components/ui/Navigation";
+import { AuthProvider } from "@/components/providers/AuthProvider";
 import "./globals.css";
 
 const caveat = Caveat({
@@ -24,8 +25,10 @@ export default function RootLayout({
       <body
         className={`${caveat.variable} font-hand min-h-screen antialiased bg-[var(--background)] text-[var(--foreground)] pb-24`}
       >
-        {children}
-        <Navigation />
+        <AuthProvider>
+          {children}
+          <Navigation />
+        </AuthProvider>
       </body>
     </html>
   );
